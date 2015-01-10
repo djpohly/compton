@@ -314,10 +314,10 @@ presum_gaussian(session_t *ps, conv *map) {
   }
 }
 
-static XImage *
-draw_shadow(session_t *ps, unsigned char *data, double opacity,
+static void
+draw_shadow(session_t *ps, XImage *ximage, double opacity,
             int width, int height) {
-  XImage *ximage;
+  unsigned char *data = (unsigned char *) ximage->data;
   int ylimit, xlimit;
   int swidth = width + ps->cgsize;
   int sheight = height + ps->cgsize;
@@ -326,14 +326,6 @@ draw_shadow(session_t *ps, unsigned char *data, double opacity,
   unsigned char d;
   int x_diff;
   int opacity_int = (int)(opacity * 25);
-
-  ximage = XCreateImage(ps->dpy, ps->vis, 8,
-    ZPixmap, 0, (char *) data, swidth, sheight, 8, swidth * sizeof(char));
-
-  if (!ximage) {
-    free(data);
-    return 0;
-  }
 
   /*
    * Build the gaussian in sections
@@ -436,8 +428,6 @@ draw_shadow(session_t *ps, unsigned char *data, double opacity,
     }
   }
   */
-
-  return ximage;
 }
 
 /**
@@ -459,9 +449,15 @@ win_build_shadow(session_t *ps, win *w, double opacity) {
   data = malloc(swidth * sheight * sizeof(unsigned char));
   if (!data) return None;
 
-  shadow_image = draw_shadow(ps, data, opacity, width, height);
-  if (!shadow_image)
+  shadow_image = XCreateImage(ps->dpy, ps->vis, 8,
+    ZPixmap, 0, (char *) data, swidth, sheight, 8, swidth * sizeof(char));
+
+  if (!shadow_image) {
+    free(data);
     return None;
+  }
+
+  draw_shadow(ps, shadow_image, opacity, width, height);
 
   shadow_pixmap = XCreatePixmap(ps->dpy, ps->root,
     shadow_image->width, shadow_image->height, 8);
