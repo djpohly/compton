@@ -315,10 +315,9 @@ presum_gaussian(session_t *ps, conv *map) {
 }
 
 static XImage *
-make_shadow(session_t *ps, double opacity,
+draw_shadow(session_t *ps, unsigned char *data, double opacity,
             int width, int height) {
   XImage *ximage;
-  unsigned char *data;
   int ylimit, xlimit;
   int swidth = width + ps->cgsize;
   int sheight = height + ps->cgsize;
@@ -327,9 +326,6 @@ make_shadow(session_t *ps, double opacity,
   unsigned char d;
   int x_diff;
   int opacity_int = (int)(opacity * 25);
-
-  data = malloc(swidth * sheight * sizeof(unsigned char));
-  if (!data) return 0;
 
   ximage = XCreateImage(ps->dpy, ps->vis, 8,
     ZPixmap, 0, (char *) data, swidth, sheight, 8, swidth * sizeof(char));
@@ -451,13 +447,19 @@ static bool
 win_build_shadow(session_t *ps, win *w, double opacity) {
   const int width = w->widthb;
   const int height = w->heightb;
+  int swidth = width + ps->cgsize;
+  int sheight = height + ps->cgsize;
+  unsigned char *data;
 
   XImage *shadow_image = NULL;
   Pixmap shadow_pixmap = None, shadow_pixmap_argb = None;
   Picture shadow_picture = None, shadow_picture_argb = None;
   GC gc = None;
 
-  shadow_image = make_shadow(ps, opacity, width, height);
+  data = malloc(swidth * sheight * sizeof(unsigned char));
+  if (!data) return None;
+
+  shadow_image = draw_shadow(ps, data, opacity, width, height);
   if (!shadow_image)
     return None;
 
@@ -1883,7 +1885,7 @@ paint_all(session_t *ps, XserverRegion region, XserverRegion region_real, win *t
         free_region(ps, &reg_shadow);
       }
 
-      // Clear the shadow here instead of in make_shadow() for saving GPU
+      // Clear the shadow here instead of in draw_shadow() for saving GPU
       // power and handling shaped windows
       if (ps->o.clear_shadow && w->border_size)
         XFixesSubtractRegion(ps->dpy, reg_paint, reg_paint, w->border_size);
