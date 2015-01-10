@@ -315,8 +315,9 @@ presum_gaussian(session_t *ps, conv *map) {
 }
 
 static XImage *
-make_shadow(session_t *ps, double opacity,
-            int width, int height) {
+make_shadow(session_t *ps, win *w, double opacity) {
+  int width = w->widthb;
+  int height = w->heightb;
   XImage *ximage;
   unsigned char *data;
   int ylimit, xlimit;
@@ -449,15 +450,12 @@ make_shadow(session_t *ps, double opacity,
  */
 static bool
 win_build_shadow(session_t *ps, win *w, double opacity) {
-  const int width = w->widthb;
-  const int height = w->heightb;
-
   XImage *shadow_image = NULL;
   Pixmap shadow_pixmap = None, shadow_pixmap_argb = None;
   Picture shadow_picture = None, shadow_picture_argb = None;
   GC gc = None;
 
-  shadow_image = make_shadow(ps, opacity, width, height);
+  shadow_image = make_shadow(ps, w, opacity);
   if (!shadow_image)
     return None;
 

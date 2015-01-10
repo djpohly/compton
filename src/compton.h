@@ -417,7 +417,7 @@ static void
 presum_gaussian(session_t *ps, conv *map);
 
 static XImage *
-make_shadow(session_t *ps, double opacity, int width, int height);
+make_shadow(session_t *ps, win *w, double opacity);
 
 static bool
 win_build_shadow(session_t *ps, win *w, double opacity);
