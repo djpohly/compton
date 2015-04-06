@@ -47,8 +47,8 @@ OPTIONS
 *-O*, *--fade-out-ms*='MILLISECONDS'::
 	Length of a fade-out animation, in milliseconds. (>= 0, defaults to 300)
 
-*-D*, *--fade-delta*='MILLISECONDS'::
-	The time between steps in fade step, in milliseconds. (> 0, defaults to 10)
+*-D*, *--animation-delta*='MILLISECONDS'::
+	The time between animation steps, in milliseconds. (> 0, defaults to 10)
 
 *-m*, *--menu-opacity*='OPACITY'::
 	Default opacity for dropdown menus and popup menus. (0.0 - 1.0, defaults to 1.0)

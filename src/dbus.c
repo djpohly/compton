@@ -938,7 +938,7 @@ cdbus_process_opts_get(session_t *ps, DBusMessage *msg) {
   cdbus_m_opts_get_do(clear_shadow, cdbus_reply_bool);
   cdbus_m_opts_get_do(xinerama_shadow_crop, cdbus_reply_bool);
 
-  cdbus_m_opts_get_do(fade_delta, cdbus_reply_int32);
+  cdbus_m_opts_get_do(animation_delta, cdbus_reply_int32);
   cdbus_m_opts_get_do(fade_in_ms, cdbus_reply_int32);
   cdbus_m_opts_get_do(fade_out_ms, cdbus_reply_int32);
   cdbus_m_opts_get_do(no_fading_openclose, cdbus_reply_bool);
@@ -992,12 +992,12 @@ cdbus_process_opts_set(session_t *ps, DBusMessage *msg) {
     goto cdbus_process_opts_set_success; \
   }
 
-  // fade_delta
-  if (!strcmp("fade_delta", target)) {
+  // animation_delta
+  if (!strcmp("animation_delta", target)) {
     int32_t val = 0.0;
     if (!cdbus_msg_get_arg(msg, 1, DBUS_TYPE_INT32, &val))
       return false;
-    ps->o.fade_delta = max_i(val, 1);
+    ps->o.animation_delta = max_i(val, 1);
     goto cdbus_process_opts_set_success;
   }
 

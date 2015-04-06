@@ -655,8 +655,8 @@ typedef struct _options_t {
   time_ms_t fade_in_ms;
   /// How long a fade out takes.  In milliseconds.
   time_ms_t fade_out_ms;
-  /// Fading animation step time. In milliseconds.
-  time_ms_t fade_delta;
+  /// Animation step time. In milliseconds.
+  time_ms_t animation_delta;
   /// Whether to disable fading on window open/close.
   bool no_fading_openclose;
   /// Whether to disable fading on ARGB managed destroyed windows.
@@ -872,8 +872,8 @@ typedef struct _session_t {
   Picture *alpha_picts;
   /// Whether all reg_ignore of windows should expire in this paint.
   bool reg_ignore_expire;
-  /// Time of last fading. In milliseconds.
-  time_ms_t fade_time;
+  /// Time of last animation step. In milliseconds.
+  time_ms_t animate_time;
   /// Head pointer of the error ignore linked list.
   ignore_t *ignore_head;
   /// Pointer to the <code>next</code> member of tail element of the error

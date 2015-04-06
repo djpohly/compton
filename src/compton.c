@@ -97,15 +97,15 @@ session_t *ps_g = NULL;
 // === Fading ===
 
 /**
- * Get the time left before next fading point.
+ * Get the time left before next animation step.
  *
  * In milliseconds.
  */
 static int
-fade_timeout(session_t *ps) {
-  int diff = ps->o.fade_delta - get_time_ms() + ps->fade_time;
+animate_timeout(session_t *ps) {
+  int diff = ps->o.animation_delta - get_time_ms() + ps->animate_time;
 
-  diff = normalize_i_range(diff, 0, ps->o.fade_delta * 2);
+  diff = normalize_i_range(diff, 0, ps->o.animation_delta * 2);
 
   return diff;
 }
@@ -1082,13 +1082,13 @@ paint_preprocess(session_t *ps, win *list) {
   // Fading calculation
   time_ms_t now = get_time_ms();
   time_ms_t elapsed = 0L;
-  if (ps->fade_time) {
-    elapsed = now - ps->fade_time;
-    ps->fade_time = now;
+  if (ps->animate_time) {
+    elapsed = now - ps->animate_time;
+    ps->animate_time = now;
   }
-  // Reset fade_time if unset, or there appears to be a time disorder
-  if (!ps->fade_time || elapsed < 0L) {
-    ps->fade_time = now;
+  // Reset animate_time if unset, or there appears to be a time disorder
+  if (!ps->animate_time || elapsed < 0L) {
+    ps->animate_time = now;
     elapsed = 0;
   }
 
@@ -4496,8 +4496,8 @@ usage(int ret) {
     "-O fade-out-ms\n"
     "  Length of a fade-out animation in milliseconds. (default 300)\n"
     "\n"
-    "-D fade-delta-time\n"
-    "  The time between steps in a fade in milliseconds. (default 10)\n"
+    "-D animation-delta-time\n"
+    "  The time between animation steps in milliseconds. (default 10)\n"
     "\n"
     "-m opacity\n"
     "  The opacity for menus. (default 1.0)\n"
@@ -5488,9 +5488,9 @@ parse_config(session_t *ps, struct options_tmp *pcfgtmp) {
   // Get options from the configuration file. We don't do range checking
   // right now. It will be done later
 
-  // -D (fade_delta)
-  if (lcfg_lookup_int(&cfg, "fade-delta", &ival))
-    ps->o.fade_delta = ival;
+  // -D (animation_delta)
+  if (lcfg_lookup_int(&cfg, "animation-delta", &ival))
+    ps->o.animation_delta = ival;
   // -I (fade_in_ms)
   lcfg_lookup_int(&cfg, "fade-in-ms", &ps->o.fade_in_ms);
   // -O (fade_out_ms)
@@ -5680,7 +5680,7 @@ get_cfg(session_t *ps, int argc, char *const *argv, bool first_pass) {
     { "shadow-offset-y", required_argument, NULL, 't' },
     { "fade-in-ms", required_argument, NULL, 'I' },
     { "fade-out-ms", required_argument, NULL, 'O' },
-    { "fade-delta", required_argument, NULL, 'D' },
+    { "animation-delta", required_argument, NULL, 'D' },
     { "menu-opacity", required_argument, NULL, 'm' },
     { "shadow", no_argument, NULL, 'c' },
     { "no-dock-shadow", no_argument, NULL, 'C' },
@@ -5841,7 +5841,7 @@ get_cfg(session_t *ps, int argc, char *const *argv, bool first_pass) {
       case 318:
       case 320:
         break;
-      P_CASELONG('D', fade_delta);
+      P_CASELONG('D', animation_delta);
       P_CASELONG('I', fade_in_ms);
       P_CASELONG('O', fade_out_ms);
       case 'c':
@@ -6035,7 +6035,7 @@ get_cfg(session_t *ps, int argc, char *const *argv, bool first_pass) {
   free(lc_numeric_old);
 
   // Range checking and option assignments
-  ps->o.fade_delta = max_i(ps->o.fade_delta, 1);
+  ps->o.animation_delta = max_i(ps->o.animation_delta, 1);
   ps->o.shadow_radius = max_i(ps->o.shadow_radius, 1);
   ps->o.shadow_red = normalize_d(ps->o.shadow_red);
   ps->o.shadow_green = normalize_d(ps->o.shadow_green);
@@ -6859,10 +6859,10 @@ mainloop(session_t *ps) {
       ptv->tv_sec = 0L;
       ptv->tv_usec = 0L;
     }
-    // Then consider fading timeout
+    // Then consider animation timeout
     else if (!ps->idling) {
       ptv = malloc(sizeof(struct timeval));
-      *ptv = ms_to_tv(fade_timeout(ps));
+      *ptv = ms_to_tv(animate_timeout(ps));
     }
 
     // Software optimization is to be applied on timeouts that require
@@ -7008,7 +7008,7 @@ session_init(session_t *ps_old, int argc, char **argv) {
       .wintype_fade = { false },
       .fade_in_ms = 300,
       .fade_out_ms = 300,
-      .fade_delta = 10,
+      .animation_delta = 10,
       .no_fading_openclose = false,
       .no_fading_destroyed_argb = false,
       .fade_blacklist = NULL,
@@ -7055,7 +7055,7 @@ session_init(session_t *ps_old, int argc, char **argv) {
     .alpha_picts = NULL,
     .reg_ignore_expire = false,
     .idling = false,
-    .fade_time = 0L,
+    .animate_time = 0L,
     .ignore_head = NULL,
     .ignore_tail = NULL,
     .reset = false,
@@ -7718,7 +7718,7 @@ session_run(session_t *ps) {
     free_region(ps, &all_damage_orig);
 
     if (ps->idling)
-      ps->fade_time = 0L;
+      ps->animate_time = 0L;
   }
 }
 
