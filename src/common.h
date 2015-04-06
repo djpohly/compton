@@ -1059,6 +1059,10 @@ typedef struct _win {
   Window id;
   /// Window attributes.
   XWindowAttributes a;
+  /// Target X position.
+  int x_tgt;
+  /// Target Y position.
+  int y_tgt;
 #ifdef CONFIG_XINERAMA
   /// Xinerama screen this window is on.
   int xinerama_scr;

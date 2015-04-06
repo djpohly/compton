@@ -2871,6 +2871,8 @@ add_win(session_t *ps, Window id, Window prev) {
 
     .id = None,
     .a = { },
+    .x_tgt = 0,
+    .y_tgt = 0,
 #ifdef CONFIG_XINERAMA
     .xinerama_scr = -1,
 #endif
