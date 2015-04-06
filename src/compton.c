@@ -2884,8 +2884,8 @@ add_win(session_t *ps, Window id, Window prev) {
     .cache_bbblst = NULL,
     .cache_oparule = NULL,
 
-    .opacity = 0,
-    .opacity_tgt = 0,
+    .opacity = OPAQUE,
+    .opacity_tgt = OPAQUE,
     .opacity_prop = OPAQUE,
     .opacity_prop_client = OPAQUE,
     .opacity_set = OPAQUE,
