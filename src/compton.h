@@ -382,7 +382,7 @@ wid_set_text_prop(session_t *ps, Window wid, Atom prop_atom, char *str) {
 }
 
 static void
-run_fade(session_t *ps, win *w, unsigned steps);
+run_fade(session_t *ps, win *w, time_ms_t elapsed);
 
 static void
 set_fade_callback(session_t *ps, win *w,

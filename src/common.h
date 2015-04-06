@@ -651,11 +651,11 @@ typedef struct _options_t {
   // === Fading ===
   /// Enable/disable fading for specific window types.
   bool wintype_fade[NUM_WINTYPES];
-  /// How much to fade in in a single fading step.
-  opacity_t fade_in_step;
-  /// How much to fade out in a single fading step.
-  opacity_t fade_out_step;
-  /// Fading time delta. In milliseconds.
+  /// How long a fade in takes.  In milliseconds.
+  time_ms_t fade_in_ms;
+  /// How long a fade out takes.  In milliseconds.
+  time_ms_t fade_out_ms;
+  /// Fading animation step time. In milliseconds.
   time_ms_t fade_delta;
   /// Whether to disable fading on window open/close.
   bool no_fading_openclose;
@@ -1151,6 +1151,8 @@ typedef struct _win {
   opacity_t opacity;
   /// Target window opacity.
   opacity_t opacity_tgt;
+  /// Remaining time for opacity animation.  0 when not animating.
+  time_ms_t opacity_time;
   /// Cached value of opacity window attribute.
   opacity_t opacity_prop;
   /// Cached value of opacity window attribute on client window. For

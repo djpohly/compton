@@ -113,28 +113,24 @@ fade_timeout(session_t *ps) {
 /**
  * Run fading on a window.
  *
- * @param steps steps of fading
+ * @param elapsed milliseconds elapsed since last update
  */
 static void
-run_fade(session_t *ps, win *w, unsigned steps) {
+run_fade(session_t *ps, win *w, time_ms_t elapsed) {
   // If we have reached target opacity, return
   if (w->opacity == w->opacity_tgt) {
     return;
   }
 
-  if (!w->fade)
+  if (!w->fade || elapsed >= w->opacity_time) {
     w->opacity = w->opacity_tgt;
-  else if (steps) {
+    w->opacity_time = 0;
+  } else if (elapsed) {
     // Use double below because opacity_t will probably overflow during
     // calculations
-    if (w->opacity < w->opacity_tgt)
-      w->opacity = normalize_d_range(
-          (double) w->opacity + (double) ps->o.fade_in_step * steps,
-          0.0, w->opacity_tgt);
-    else
-      w->opacity = normalize_d_range(
-          (double) w->opacity - (double) ps->o.fade_out_step * steps,
-          w->opacity_tgt, OPAQUE);
+    w->opacity += ((double) w->opacity_tgt - w->opacity) *
+      elapsed / w->opacity_time;
+    w->opacity_time -= elapsed;
   }
 
   if (w->opacity != w->opacity_tgt) {
@@ -1083,17 +1079,18 @@ static win *
 paint_preprocess(session_t *ps, win *list) {
   win *t = NULL, *next = NULL;
 
-  // Fading step calculation
-  time_ms_t steps = 0L;
+  // Fading calculation
+  time_ms_t now = get_time_ms();
+  time_ms_t elapsed = 0L;
   if (ps->fade_time) {
-    steps = ((get_time_ms() - ps->fade_time) + FADE_DELTA_TOLERANCE * ps->o.fade_delta) / ps->o.fade_delta;
+    elapsed = now - ps->fade_time;
+    ps->fade_time = now;
   }
   // Reset fade_time if unset, or there appears to be a time disorder
-  if (!ps->fade_time || steps < 0L) {
-    ps->fade_time = get_time_ms();
-    steps = 0L;
+  if (!ps->fade_time || elapsed < 0L) {
+    ps->fade_time = now;
+    elapsed = 0;
   }
-  ps->fade_time += steps * ps->o.fade_delta;
 
   XserverRegion last_reg_ignore = None;
 
@@ -1134,7 +1131,7 @@ paint_preprocess(session_t *ps, win *list) {
     }
 
     // Run fading
-    run_fade(ps, w, steps);
+    run_fade(ps, w, elapsed);
 
     // Opacity will not change, from now on.
 
@@ -2383,6 +2380,13 @@ calc_opacity(session_t *ps, win *w) {
       opacity = ps->o.active_opacity;
   }
 
+  // Reset timer if the target opacity is changed
+  if (opacity != w->opacity_tgt) {
+    if (opacity > w->opacity)
+      w->opacity_time = ps->o.fade_in_ms;
+    else
+      w->opacity_time = ps->o.fade_out_ms;
+  }
   w->opacity_tgt = opacity;
 }
 
@@ -2886,6 +2890,7 @@ add_win(session_t *ps, Window id, Window prev) {
 
     .opacity = OPAQUE,
     .opacity_tgt = OPAQUE,
+    .opacity_time = 0L,
     .opacity_prop = OPAQUE,
     .opacity_prop_client = OPAQUE,
     .opacity_set = OPAQUE,
@@ -4485,11 +4490,11 @@ usage(int ret) {
     "-t top-offset\n"
     "  The top offset for shadows. (default -15)\n"
     "\n"
-    "-I fade-in-step\n"
-    "  Opacity change between steps while fading in. (default 0.028)\n"
+    "-I fade-in-ms\n"
+    "  Length of a fade-in animation in milliseconds. (default 300)\n"
     "\n"
-    "-O fade-out-step\n"
-    "  Opacity change between steps while fading out. (default 0.03)\n"
+    "-O fade-out-ms\n"
+    "  Length of a fade-out animation in milliseconds. (default 300)\n"
     "\n"
     "-D fade-delta-time\n"
     "  The time between steps in a fade in milliseconds. (default 10)\n"
@@ -5486,12 +5491,10 @@ parse_config(session_t *ps, struct options_tmp *pcfgtmp) {
   // -D (fade_delta)
   if (lcfg_lookup_int(&cfg, "fade-delta", &ival))
     ps->o.fade_delta = ival;
-  // -I (fade_in_step)
-  if (config_lookup_float(&cfg, "fade-in-step", &dval))
-    ps->o.fade_in_step = normalize_d(dval) * OPAQUE;
-  // -O (fade_out_step)
-  if (config_lookup_float(&cfg, "fade-out-step", &dval))
-    ps->o.fade_out_step = normalize_d(dval) * OPAQUE;
+  // -I (fade_in_ms)
+  lcfg_lookup_int(&cfg, "fade-in-ms", &ps->o.fade_in_ms);
+  // -O (fade_out_ms)
+  lcfg_lookup_int(&cfg, "fade-out-ms", &ps->o.fade_out_ms);
   // -r (shadow_radius)
   lcfg_lookup_int(&cfg, "shadow-radius", &ps->o.shadow_radius);
   // -o (shadow_opacity)
@@ -5675,8 +5678,8 @@ get_cfg(session_t *ps, int argc, char *const *argv, bool first_pass) {
     { "shadow-opacity", required_argument, NULL, 'o' },
     { "shadow-offset-x", required_argument, NULL, 'l' },
     { "shadow-offset-y", required_argument, NULL, 't' },
-    { "fade-in-step", required_argument, NULL, 'I' },
-    { "fade-out-step", required_argument, NULL, 'O' },
+    { "fade-in-ms", required_argument, NULL, 'I' },
+    { "fade-out-ms", required_argument, NULL, 'O' },
     { "fade-delta", required_argument, NULL, 'D' },
     { "menu-opacity", required_argument, NULL, 'm' },
     { "shadow", no_argument, NULL, 'c' },
@@ -5839,12 +5842,8 @@ get_cfg(session_t *ps, int argc, char *const *argv, bool first_pass) {
       case 320:
         break;
       P_CASELONG('D', fade_delta);
-      case 'I':
-        ps->o.fade_in_step = normalize_d(atof(optarg)) * OPAQUE;
-        break;
-      case 'O':
-        ps->o.fade_out_step = normalize_d(atof(optarg)) * OPAQUE;
-        break;
+      P_CASELONG('I', fade_in_ms);
+      P_CASELONG('O', fade_out_ms);
       case 'c':
         shadow_enable = true;
         break;
@@ -7007,8 +7006,8 @@ session_init(session_t *ps_old, int argc, char **argv) {
       .xinerama_shadow_crop = false,
 
       .wintype_fade = { false },
-      .fade_in_step = 0.028 * OPAQUE,
-      .fade_out_step = 0.03 * OPAQUE,
+      .fade_in_ms = 300,
+      .fade_out_ms = 300,
       .fade_delta = 10,
       .no_fading_openclose = false,
       .no_fading_destroyed_argb = false,

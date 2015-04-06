@@ -41,11 +41,11 @@ OPTIONS
 *-t*, *--shadow-offset-y*='OFFSET'::
 	The top offset for shadows, in pixels. (defaults to -15)
 
-*-I*, *--fade-in-step*='OPACITY_STEP'::
-	Opacity change between steps while fading in. (0.01 - 1.0, defaults to 0.028)
+*-I*, *--fade-in-ms*='MILLISECONDS'::
+	Length of a fade-in animation, in milliseconds. (>= 0, defaults to 300)
 
-*-O*, *--fade-out-step*='OPACITY_STEP'::
-	Opacity change between steps while fading out. (0.01 - 1.0, defaults to 0.03)
+*-O*, *--fade-out-ms*='MILLISECONDS'::
+	Length of a fade-out animation, in milliseconds. (>= 0, defaults to 300)
 
 *-D*, *--fade-delta*='MILLISECONDS'::
 	The time between steps in fade step, in milliseconds. (> 0, defaults to 10)
