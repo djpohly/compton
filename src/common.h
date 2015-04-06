@@ -703,6 +703,10 @@ typedef struct _options_t {
   /// Whether to use fixed inactive dim opacity, instead of deciding
   /// based on window opacity.
   bool inactive_dim_fixed;
+  /// How long a dim animation takes.  In milliseconds.
+  time_ms_t inactive_dim_ms;
+  /// How long an undim animation takes.  In milliseconds.
+  time_ms_t inactive_undim_ms;
   /// Conditions of windows to have inverted colors.
   c2_lptr_t *invert_color_list;
   /// Rules to change window opacity.
@@ -1203,8 +1207,12 @@ typedef struct _win {
   long prop_shadow;
 
   // Dim-related members
-  /// Whether the window is to be dimmed.
-  bool dim;
+  /// Current dim opacity.
+  double dim_opacity;
+  /// Target dim opacity.
+  double dim_opacity_tgt;
+  /// Remaining time for dim animation.  In milliseconds.
+  time_ms_t dim_time;
 
   /// Whether to invert window color.
   bool invert_color;

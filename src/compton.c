@@ -159,6 +159,34 @@ set_fade_callback(session_t *ps, win *w,
   }
 }
 
+// === Dimming ===
+
+/**
+ * Run dimming on a window.
+ *
+ * @param elapsed milliseconds elapsed since last update
+ */
+static void
+run_dim(session_t *ps, win *w, time_ms_t elapsed) {
+  // If dim has reached target opacity, return
+  if (w->dim_opacity == w->dim_opacity_tgt) {
+    return;
+  }
+
+  if (elapsed >= w->dim_time) {
+    w->dim_opacity = w->dim_opacity_tgt;
+    w->dim_time = 0;
+  } else if (elapsed) {
+    w->dim_opacity += (w->dim_opacity_tgt - w->dim_opacity) *
+      elapsed / w->dim_time;
+    w->dim_time -= elapsed;
+  }
+
+  if (w->dim_opacity != w->dim_opacity_tgt) {
+    ps->idling = false;
+  }
+}
+
 // === Shadows ===
 
 static double __attribute__((const))
@@ -1130,8 +1158,9 @@ paint_preprocess(session_t *ps, win *list) {
       calc_dim(ps, w);
     }
 
-    // Run fading
+    // Run animations
     run_fade(ps, w, elapsed);
+    run_dim(ps, w, elapsed);
 
     // Opacity will not change, from now on.
 
@@ -1686,8 +1715,8 @@ win_paint_win(session_t *ps, win *w, XserverRegion reg_paint,
     free_picture(ps, &pict);
 
   // Dimming the window if needed
-  if (w->dim) {
-    double dim_opacity = ps->o.inactive_dim;
+  if (w->dim_opacity) {
+    double dim_opacity = w->dim_opacity;
     if (!ps->o.inactive_dim_fixed)
       dim_opacity *= get_opacity_percent(w);
 
@@ -2407,10 +2436,7 @@ calc_dim(session_t *ps, win *w) {
     dim = false;
   }
 
-  if (dim != w->dim) {
-    w->dim = dim;
-    add_damage_win(ps, w);
-  }
+  w->dim_opacity_tgt = dim ? ps->o.inactive_dim : 0.0;
 }
 
 /**
@@ -2915,7 +2941,8 @@ add_win(session_t *ps, Window id, Window prev) {
     .shadow_paint = PAINT_INIT,
     .prop_shadow = -1,
 
-    .dim = false,
+    .dim_opacity = 0.0,
+    .dim_opacity_tgt = 0.0,
 
     .invert_color = false,
     .invert_color_force = UNSET,
@@ -4681,6 +4708,12 @@ usage(int ret) {
     "--inactive-dim-fixed\n"
     "  Use fixed inactive dim value.\n"
     "\n"
+    "--inactive-dim-ms\n"
+    "  Length of a dim animation in milliseconds (default 0)\n"
+    "\n"
+    "--inactive-undim-ms\n"
+    "  Length of an undim animation in milliseconds (default 0)\n"
+    "\n"
     "--detect-transient\n"
     "  Use WM_TRANSIENT_FOR to group windows, and consider windows in\n"
     "  the same group focused at the same time.\n"
@@ -5589,6 +5622,10 @@ parse_config(session_t *ps, struct options_tmp *pcfgtmp) {
     ps->o.unredir_if_possible_delay = ival;
   // --inactive-dim-fixed
   lcfg_lookup_bool(&cfg, "inactive-dim-fixed", &ps->o.inactive_dim_fixed);
+  // --inactive-dim-ms
+  lcfg_lookup_int(&cfg, "inactive-dim-ms", &ps->o.inactive_dim_ms);
+  // --inactive-undim-ms
+  lcfg_lookup_int(&cfg, "inactive-undim-ms", &ps->o.inactive_undim_ms);
   // --detect-transient
   lcfg_lookup_bool(&cfg, "detect-transient", &ps->o.detect_transient);
   // --detect-client-leader
@@ -5754,6 +5791,8 @@ get_cfg(session_t *ps, int argc, char *const *argv, bool first_pass) {
     { "version", no_argument, NULL, 318 },
     { "no-x-selection", no_argument, NULL, 319 },
     { "no-name-pixmap", no_argument, NULL, 320 },
+    { "inactive-dim-ms", required_argument, NULL, 321 },
+    { "inactive-undim-ms", required_argument, NULL, 322 },
     { "reredir-on-root-change", no_argument, NULL, 731 },
     { "glx-reinit-on-root-change", no_argument, NULL, 732 },
     // Must terminate with a NULL entry
@@ -6021,6 +6060,8 @@ get_cfg(session_t *ps, int argc, char *const *argv, bool first_pass) {
         ps->o.glx_fshader_win_str = mstrcpy(optarg);
         break;
       P_CASEBOOL(319, no_x_selection);
+      P_CASELONG(321, inactive_dim_ms);
+      P_CASELONG(322, inactive_undim_ms);
       P_CASEBOOL(731, reredir_on_root_change);
       P_CASEBOOL(732, glx_reinit_on_root_change);
       default:
@@ -7028,6 +7069,8 @@ session_init(session_t *ps_old, int argc, char **argv) {
       .blur_kerns = { NULL },
       .inactive_dim = 0.0,
       .inactive_dim_fixed = false,
+      .inactive_dim_ms = 0,
+      .inactive_undim_ms = 0,
       .invert_color_list = NULL,
       .opacity_rules = NULL,
 
