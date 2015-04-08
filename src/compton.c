@@ -2484,7 +2484,12 @@ calc_dim(session_t *ps, win *w) {
     dim = false;
   }
 
-  w->dim_opacity_tgt = dim ? ps->o.inactive_dim : 0.0;
+  double new_opacity = dim ? ps->o.inactive_dim : 0.0;
+  if (new_opacity != w->dim_opacity_tgt) {
+    w->dim_time = (new_opacity < w->dim_opacity_tgt) ?
+      ps->o.inactive_dim_ms : ps->o.inactive_undim_ms;
+    w->dim_opacity_tgt = new_opacity;
+  }
 }
 
 /**
