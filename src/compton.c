@@ -3258,7 +3258,7 @@ configure_win(session_t *ps, XConfigureEvent *ce) {
     }
 
     if (factor_change) {
-      w->move_time = 200;
+      w->move_time = ps->o.move_ms;
       cxinerama_win_upd_scr(ps, w);
       win_on_factor_change(ps, w);
     }
@@ -4573,6 +4573,9 @@ usage(int ret) {
     "-O fade-out-ms\n"
     "  Length of a fade-out animation in milliseconds. (default 300)\n"
     "\n"
+    "-M move-ms\n"
+    "  Length of a window-move animation. (default 0)\n"
+    "\n"
     "-D animation-delta-time\n"
     "  The time between animation steps in milliseconds. (default 10)\n"
     "\n"
@@ -5578,6 +5581,8 @@ parse_config(session_t *ps, struct options_tmp *pcfgtmp) {
   lcfg_lookup_int(&cfg, "fade-in-ms", &ps->o.fade_in_ms);
   // -O (fade_out_ms)
   lcfg_lookup_int(&cfg, "fade-out-ms", &ps->o.fade_out_ms);
+  // -M (move_ms)
+  lcfg_lookup_int(&cfg, "move-ms", &ps->o.move_ms);
   // -r (shadow_radius)
   lcfg_lookup_int(&cfg, "shadow-radius", &ps->o.shadow_radius);
   // -o (shadow_opacity)
@@ -5757,7 +5762,7 @@ parse_config(session_t *ps, struct options_tmp *pcfgtmp) {
  */
 static void
 get_cfg(session_t *ps, int argc, char *const *argv, bool first_pass) {
-  const static char *shortopts = "D:I:O:d:r:o:m:l:t:i:e:hscnfFCaSzGb";
+  const static char *shortopts = "D:I:M:O:d:r:o:m:l:t:i:e:hscnfFCaSzGb";
   const static struct option longopts[] = {
     { "help", no_argument, NULL, 'h' },
     { "config", required_argument, NULL, 256 },
@@ -5767,6 +5772,7 @@ get_cfg(session_t *ps, int argc, char *const *argv, bool first_pass) {
     { "shadow-offset-y", required_argument, NULL, 't' },
     { "fade-in-ms", required_argument, NULL, 'I' },
     { "fade-out-ms", required_argument, NULL, 'O' },
+    { "move-ms", required_argument, NULL, 'M' },
     { "animation-delta", required_argument, NULL, 'D' },
     { "menu-opacity", required_argument, NULL, 'm' },
     { "shadow", no_argument, NULL, 'c' },
@@ -5933,6 +5939,7 @@ get_cfg(session_t *ps, int argc, char *const *argv, bool first_pass) {
       P_CASELONG('D', animation_delta);
       P_CASELONG('I', fade_in_ms);
       P_CASELONG('O', fade_out_ms);
+      P_CASELONG('M', move_ms);
       case 'c':
         shadow_enable = true;
         break;
@@ -7099,6 +7106,7 @@ session_init(session_t *ps_old, int argc, char **argv) {
       .wintype_fade = { false },
       .fade_in_ms = 300,
       .fade_out_ms = 300,
+      .move_ms = 0,
       .animation_delta = 10,
       .no_fading_openclose = false,
       .no_fading_destroyed_argb = false,

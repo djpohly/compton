@@ -655,6 +655,8 @@ typedef struct _options_t {
   time_ms_t fade_in_ms;
   /// How long a fade out takes.  In milliseconds.
   time_ms_t fade_out_ms;
+  /// How long a move animation takes. In milliseconds.
+  time_ms_t move_ms;
   /// Animation step time. In milliseconds.
   time_ms_t animation_delta;
   /// Whether to disable fading on window open/close.
