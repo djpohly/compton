@@ -133,6 +133,8 @@ run_fade(session_t *ps, win *w, time_ms_t elapsed) {
     w->opacity_time -= elapsed;
   }
 
+  add_damage_win(ps, w);
+
   if (w->opacity != w->opacity_tgt) {
     ps->idling = false;
   }
@@ -181,6 +183,8 @@ run_dim(session_t *ps, win *w, time_ms_t elapsed) {
       elapsed / w->dim_time;
     w->dim_time -= elapsed;
   }
+
+  add_damage_win(ps, w);
 
   if (w->dim_opacity != w->dim_opacity_tgt) {
     ps->idling = false;
@@ -1261,7 +1265,7 @@ paint_preprocess(session_t *ps, win *list) {
 
     // Add window to damaged area if its painting status changes
     // or opacity changes
-    if (to_paint != w->to_paint || w->opacity != opacity_old)
+    if (to_paint != w->to_paint)
       add_damage_win(ps, w);
 
     // Destroy all reg_ignore above when window mode changes
