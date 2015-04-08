@@ -1063,6 +1063,8 @@ typedef struct _win {
   int x_tgt;
   /// Target Y position.
   int y_tgt;
+  /// Time remaining in move animation.
+  time_ms_t move_time;
 #ifdef CONFIG_XINERAMA
   /// Xinerama screen this window is on.
   int xinerama_scr;

@@ -187,6 +187,49 @@ run_dim(session_t *ps, win *w, time_ms_t elapsed) {
   }
 }
 
+// === Motion ===
+/**
+ * Run move animation on a window.
+ *
+ * @param elapsed milliseconds elapsed since last update
+ */
+static void
+run_move(session_t *ps, win *w, time_ms_t elapsed) {
+  // If window has reached target position, return
+  if (w->a.x == w->x_tgt && w->a.y == w->y_tgt) {
+    return;
+  }
+
+  XserverRegion damage = XFixesCreateRegion(ps->dpy, 0, 0);
+  if (w->extents != None) {
+    XFixesCopyRegion(ps->dpy, damage, w->extents);
+  }
+
+  free_region(ps, &w->extents);
+  free_region(ps, &w->border_size);
+
+  if (elapsed >= w->move_time) {
+    w->a.x = w->x_tgt;
+    w->a.y = w->y_tgt;
+    w->move_time = 0;
+  } else if (elapsed) {
+    w->a.x += ((double) w->x_tgt - w->a.x) * elapsed / w->move_time;
+    w->a.y += ((double) w->y_tgt - w->a.y) * elapsed / w->move_time;
+    w->move_time -= elapsed;
+  }
+
+  if (damage) {
+    XserverRegion extents = win_extents(ps, w);
+    XFixesUnionRegion(ps->dpy, damage, damage, extents);
+    XFixesDestroyRegion(ps->dpy, extents);
+    add_damage(ps, damage);
+  }
+
+  if (w->a.x != w->x_tgt || w->a.y != w->y_tgt) {
+    ps->idling = false;
+  }
+}
+
 // === Shadows ===
 
 static double __attribute__((const))
@@ -1159,6 +1202,7 @@ paint_preprocess(session_t *ps, win *list) {
     }
 
     // Run animations
+    run_move(ps, w, elapsed);
     run_fade(ps, w, elapsed);
     run_dim(ps, w, elapsed);
 
@@ -2873,6 +2917,7 @@ add_win(session_t *ps, Window id, Window prev) {
     .a = { },
     .x_tgt = 0,
     .y_tgt = 0,
+    .move_time = 0L,
 #ifdef CONFIG_XINERAMA
     .xinerama_scr = -1,
 #endif
@@ -2994,6 +3039,8 @@ add_win(session_t *ps, Window id, Window prev) {
     free(new);
     return false;
   }
+  new->x_tgt = new->a.x;
+  new->y_tgt = new->a.y;
 
   // Delay window mapping
   int map_state = new->a.map_state;
@@ -3183,8 +3230,8 @@ configure_win(session_t *ps, XConfigureEvent *ce) {
       free_region(ps, &w->border_size);
     }
 
-    w->a.x = ce->x;
-    w->a.y = ce->y;
+    w->x_tgt = ce->x;
+    w->y_tgt = ce->y;
 
     if (w->a.width != ce->width || w->a.height != ce->height
         || w->a.border_width != ce->border_width)
@@ -3211,6 +3258,7 @@ configure_win(session_t *ps, XConfigureEvent *ce) {
     }
 
     if (factor_change) {
+      w->move_time = 200;
       cxinerama_win_upd_scr(ps, w);
       win_on_factor_change(ps, w);
     }
