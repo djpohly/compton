@@ -279,6 +279,17 @@ typedef struct {
   int y;
 } geometry_t;
 
+/// A structure representing margins around a rectangle.
+typedef struct {
+  int top;
+  int left;
+  int bottom;
+  int right;
+} margin_t;
+
+// Or use cmemzero().
+#define MARGIN_INIT { 0, 0, 0, 0 }
+
 /// Enumeration type of window painting mode.
 typedef enum {
   WMODE_TRANS,
@@ -1188,8 +1199,8 @@ typedef struct _win {
   // Frame-opacity-related members
   /// Current window frame opacity. Affected by window opacity.
   double frame_opacity;
-  /// Frame widths. Determined by client window attributes.
-  unsigned int left_width, right_width, top_width, bottom_width;
+  /// Frame extents. Acquired from _NET_FRAME_EXTENTS.
+  margin_t frame_extents;
 
   // Shadow-related members
   /// Whether a window has shadow. Calculated.
@@ -1361,6 +1372,13 @@ allocchk_(const char *func_name, void *ptr) {
 /// @brief Wrapper of ealloc().
 #define crealloc(ptr, nmemb, type) ((type *) allocchk(realloc((ptr), (nmemb) * sizeof(type))))
 
+/// @brief Zero out the given memory block.
+#define cmemzero(ptr, size) memset((ptr), 0, (size))
+
+/// @brief Wrapper of cmemzero() that handles a pointer to a single item, for
+///        convenience.
+#define cmemzero_one(ptr) cmemzero((ptr), sizeof(*(ptr)))
+
 /**
  * Return whether a struct timeval value is empty.
  */
@@ -1475,7 +1493,7 @@ timespec_subtract(struct timespec *result,
 /**
  * Get current time in struct timeval.
  */
-static inline struct timeval __attribute__((const))
+static inline struct timeval
 get_time_timeval(void) {
   struct timeval tv = { 0, 0 };
 
@@ -1490,7 +1508,7 @@ get_time_timeval(void) {
  *
  * Note its starting time is unspecified.
  */
-static inline struct timespec __attribute__((const))
+static inline struct timespec
 get_time_timespec(void) {
   struct timespec tm = { 0, 0 };
 
